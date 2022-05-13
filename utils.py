@@ -1,9 +1,12 @@
 import re
 import dns.resolver
-from smtplib import SMTP
+import smtplib
 from settings import Config
+import logging
+import socket
 
-regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+regex = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"
+
 
 def valid_email_format(email: str):
     if re.fullmatch(regex, email):
@@ -17,18 +20,64 @@ def is_disposable_domain(domain: str):
     return False
 
 
+def valid_domain(domain: str):
+    try:
+        dns.resolver.resolve(domain, "MX")
+        return True
+    except dns.resolver.NXDOMAIN:
+        return False
+
+
 def extract_mx_record(domain: str) -> list:
-    answers = dns.resolver.resolve(domain, 'MX')
+    answers = dns.resolver.resolve(domain, "MX")
     return [answer.exchange for answer in answers]
 
 
-def verify_email(domain: str, email: str):
+def setup_module_logger(name):
+    """Set up module level logging with formatting"""
+    logger = logging.getLogger(name)
+    ch = logging.StreamHandler()
+    # Really should not be configuring formats in a library, see
+    # https://docs.python.org/3/howto/logging.html#configuring-logging-for-a-library
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+
+
+setup_module_logger('verify_email')
+
+def verify_email(domain: str, email: str, timeout=20):
     mx_records = extract_mx_record(domain)
-    
-    with SMTP(host=mx_records[-1].to_text()[:-1], port=25) as smtp:
-        smtp.helo(domain)
-        smtp.mail("<>")
-        code, msg = smtp.rcpt(email)
-        if code == 250:
-            return True
+    host = mx_records[-1].to_text()[:-1]
+    try:
+        smtp = smtplib.SMTP(host, timeout=timeout)
+        status, _ = smtp.ehlo()
+        if status >= 400:
+            smtp.quit()
+            print(f'{host} answer: {status} - {_}\n')
+            return False
+        smtp.mail('')
+        status, _ = smtp.rcpt(email)
+        if status >= 400:
+            print(f'{host} answer: {status} - {_}\n')
+            result = False
+        if status >= 200 and status <= 250:
+            result = True
+
+        print(f'{host} answer: {status} - {_}\n')
+        smtp.quit()
+
+    except smtplib.SMTPServerDisconnected:
+        print(f'Server does not permit verify user, {host} disconnected.\n')
+    except smtplib.SMTPConnectError:
+        print(f'Unable to connect to {host}.\n')
+    except socket.timeout as e:
+        print(f'Timeout connecting to server {host}: {e}.\n')
+        return None
+    except socket.error as e:
+        print(f'ServerError or socket.error exception raised {e}.\n')
+        return None 
+    except Exception as e:
         return False
