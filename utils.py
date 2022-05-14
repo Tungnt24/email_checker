@@ -2,7 +2,6 @@ import re
 import dns.resolver
 import smtplib
 from settings import Config
-import logging
 import socket
 
 regex = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"
@@ -33,20 +32,6 @@ def extract_mx_record(domain: str) -> list:
     return [answer.exchange for answer in answers]
 
 
-def setup_module_logger(name):
-    """Set up module level logging with formatting"""
-    logger = logging.getLogger(name)
-    ch = logging.StreamHandler()
-    # Really should not be configuring formats in a library, see
-    # https://docs.python.org/3/howto/logging.html#configuring-logging-for-a-library
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-    ch.setFormatter(formatter)
-    logger.addHandler(ch)
-
-
-setup_module_logger('verify_email')
 
 def verify_email(domain: str, email: str, timeout=20):
     mx_records = extract_mx_record(domain)
