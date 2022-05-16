@@ -3,10 +3,9 @@ from schema import VerificationResponse, VerificationBase
 from utils import (
     valid_domain,
     valid_email_format,
-    is_disposable_domain,
-    verify_email,
+    is_disposable_domain
 )
-
+from workers.tasks import verify_email
 router = APIRouter()
 
 
@@ -36,7 +35,7 @@ async def email_checker(verify: VerificationBase):
             email=email, status="invalid", reason=f"{domain} does not exist."
         )
 
-    result = verify_email(email)
+    result = verify_email.delay(email)
     if result["deliverable"]:
         return VerificationResponse(
             email=email, status="valid", reason="The email address is valid."

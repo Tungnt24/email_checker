@@ -24,17 +24,3 @@ def valid_domain(domain: str):
         return True
     except (resolver.NoAnswer, resolver.NXDOMAIN, resolver.NoNameservers):
         return False
-
-def verify_email(email: str):
-    result = {'deliverable': False, 'full_inbox': False}
-    for proxy in Config.PROXIES:
-        host, _, port = proxy.partition(":")
-        socks_verifier = Verifier(
-            source_addr="<>",
-            proxy_type="socks4",
-            proxy_addr=host,
-            proxy_port=port)
-        result = socks_verifier.verify(email)
-        if result['deliverable']:
-            return result
-    return result
