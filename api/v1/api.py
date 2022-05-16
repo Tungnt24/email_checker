@@ -1,6 +1,6 @@
 from fastapi import APIRouter
-from .endpoints import verify
+from .endpoints import verification
 
 router = APIRouter()
 
-router.include_router(verify.router, tags=["verify"])
+router.include_router(verification.router, tags=["verification"])

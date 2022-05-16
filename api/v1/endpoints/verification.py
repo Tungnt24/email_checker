@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from schema import VerifyResponse, VerifyBase
+from schema import VerificationResponse, VerificationBase
 from utils import (
     valid_domain,
     valid_email_format,
@@ -11,20 +11,20 @@ router = APIRouter()
 
 
 @router.post(
-    "/verify", response_model=VerifyResponse, response_model_exclude_unset=True
+    "/verification", response_model=VerificationResponse, response_model_exclude_unset=True
 )
-async def email_checker(verify: VerifyBase):
+async def email_checker(verify: VerificationBase):
     email = verify.email
     _, _, domain = email.partition("@")
     if not valid_email_format(email):
-        return VerifyResponse(
+        return VerificationResponse(
             email=email,
             status="invalid",
             reason="The email address format is not valid.",
         )
 
     if is_disposable_domain(domain):
-        return VerifyResponse(
+        return VerificationResponse(
             email=email,
             status="invalid",
             reason="It's a disposable email address.",
@@ -32,14 +32,15 @@ async def email_checker(verify: VerifyBase):
         )
 
     if not valid_domain(domain):
-        return VerifyResponse(
+        return VerificationResponse(
             email=email, status="invalid", reason=f"{domain} does not exist."
         )
 
-    if verify_email(domain, email):
-        return VerifyResponse(
+    result = verify_email(email)
+    if result["deliverable"]:
+        return VerificationResponse(
             email=email, status="valid", reason="The email address is valid."
         )
-    return VerifyResponse(
+    return VerificationResponse(
         email=email, status="invalid", reason="The mailbox doesn't exist."
     )
