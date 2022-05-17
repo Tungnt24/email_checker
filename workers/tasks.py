@@ -2,8 +2,7 @@ from workers.celery_app import celery_app
 from settings import ProxyConfig
 from utils.validate import verify_with_proxy, verify_without_proxy
 import concurrent.futures
-from utils.logger import logger
-from utils.verifier import Verifier
+
 
 @celery_app.task
 def verify_email(email: str):
@@ -17,6 +16,7 @@ def verify_email(email: str):
             if result.get('deliverable'):
                 return result
     return result
+
 
 @celery_app.task
 def verify_email_without_proxy(email: str):
