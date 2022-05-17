@@ -1,12 +1,12 @@
 from celery import Celery
 from multiprocessing import Process
-from settings import Config
+from settings import CeleryConfig
 
 celery_app = Celery(
     "tasks",
-    broker=Config.BROKER_URL,
+    broker=CeleryConfig.BROKER_URL,
     include=["workers.tasks"],
-    backend=Config.BACKEND_URL,
+    backend=CeleryConfig.BACKEND_URL,
 )
 
 def run():

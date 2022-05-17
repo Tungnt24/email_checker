@@ -1,22 +1,24 @@
 from workers.celery_app import celery_app
-from settings import Config
-from verifier import Verifier
-
+from settings import ProxyConfig
+from utils.validate import verify_with_proxy, verify_without_proxy
+import concurrent.futures
+from utils.logger import logger
+from utils.verifier import Verifier
 
 @celery_app.task
 def verify_email(email: str):
-    result = {'deliverable': False, 'full_inbox': False}
-    for proxy in Config.PROXIES:
-        print("A")
-        host, _, port = proxy.partition(":")
-        print(host, port)
-        socks_verifier = Verifier(
-            source_addr="<>",
-            proxy_type="socks4",
-            proxy_addr=host,
-            proxy_port=port)
-        result = socks_verifier.verify(email)
-        if result['deliverable']:
-            print(result)
-            return result
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(ProxyConfig.PROXIES)) as executor:
+        futures = []
+        for proxy in ProxyConfig.PROXIES:                                       
+            host, _, port = proxy.partition(":")
+            futures.append(executor.submit(verify_with_proxy, email, host, port))
+        for future in concurrent.futures.as_completed(futures):
+            result = future.result()
+            if result.get('deliverable'):
+                return result
+    return result
+
+@celery_app.task
+def verify_email_without_proxy(email: str):
+    result = verify_without_proxy(email)
     return result
