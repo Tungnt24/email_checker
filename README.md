@@ -18,10 +18,10 @@ python workers/celery_app.py
 
 # Run API
 ```sh
-uvicorn main:app
+uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
 # DEMO
 ```sh
-103.56.158.197:8000
+http://103.56.158.197:8000/docs
 ```
